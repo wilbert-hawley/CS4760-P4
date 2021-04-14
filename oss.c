@@ -1,6 +1,8 @@
 #include "utility.h"
+
 struct shmbuf *shmp;
 int shmid;
+
 int main(int argc, char** argv) {
 
   printf("Compiled in oss.c\n");
@@ -45,6 +47,8 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
   
+  shmp->pcb[0] = init_pcb(0);
+
   int child = fork();
 
   if(child == 0)
@@ -61,6 +65,7 @@ int main(int argc, char** argv) {
   }
 
   // delete message queue
+  free(shmp->pcb[0]);
   msgctl(msqid, IPC_RMID, NULL);
   shmctl(shmid, IPC_RMID, NULL);
   return 0;

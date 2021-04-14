@@ -34,12 +34,12 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
   struct msgbuf msg;
-
+  // wait for oss to send messag to run
   msgrcv(msqid, &msg, sizeof(msg), getpid(), 0);
-
+  //printf("child_proc: shmp->pcb[0].local_pid = %d\n", shmp->pcb[0]->local_pid); 
   printf("child_proc: Message recieved: %d\n", msg.test);
   printf("child_proc: Time: %ds %dns\n", shmp->sec, shmp->nanosec);
-
+  //printf("child_proc: shmp->pcb[0].local_pid = %d\n", shmp->pcb[0]->local_pid);
   msg.mtype = getppid();
   msg.test = 0;
   

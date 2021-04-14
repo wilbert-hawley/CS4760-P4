@@ -14,6 +14,7 @@
 #include <sys/wait.h>
 #include <sys/msg.h>
 #include <stdbool.h>
+#include <time.h>
 struct msgbuf {
   long mtype;
   int test;
@@ -31,11 +32,17 @@ struct proc_ctrl_block {
   int type;	
   long real_pid;
   // keep track if it's finished or not
-  bool done;
+  bool done,
+       full;
 };
+
+int type_prob;
+int type_select(int);
+struct proc_ctrl_block* init_pcb(int);
+ 
 
 struct shmbuf {
   unsigned int sec;
   unsigned int nanosec;
-  struct proc_ctrl_block pcb[100];
+  struct proc_ctrl_block* pcb[19];
 };
