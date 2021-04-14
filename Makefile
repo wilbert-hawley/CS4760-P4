@@ -15,8 +15,8 @@ all: $(MASTER) $(CHILD)
 $(MASTER): $(MASTER_O) $(UTILITY_O)
 	$(CC) $(CFLAGS) $(MASTER_O) $(UTILITY_O) -o $(MASTER)
 
-$(CHILD): $(BIN_ADDER_O) $(UTILITY_O)
-	$(CC) $(CFLAGS) $(BIN_ADDER_O) $(UTILITY_O) -o $(CHILD)
+$(CHILD): $(CHILD_O) $(UTILITY_O)
+	$(CC) $(CFLAGS) $(CHILD_O) $(UTILITY_O) -o $(CHILD)
 
 %.o: %.c $(UTILITY_H)
 	$(CC) $(CFLAGS) -c $*.c -o $*.o
