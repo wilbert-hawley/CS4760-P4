@@ -35,16 +35,28 @@ int main(int argc, char** argv) {
   }
   struct msgbuf msg;
   // wait for oss to send messag to run
-  msgrcv(msqid, &msg, sizeof(msg), getpid(), 0);
-  //printf("child_proc: shmp->pcb[0].local_pid = %d\n", shmp->pcb[0]->local_pid); 
-  printf("child_proc: Message recieved: %d\n", msg.test);
+ // msgrcv(msqid, &msg, sizeof(msg), getpid(), 0);
+ 
+  printf("child_proc: Message recieved: %d\n", msg.mi.local_pid);
   printf("child_proc: Time: %ds %dns\n", shmp->sec, shmp->nanosec);
-  //printf("child_proc: shmp->pcb[0].local_pid = %d\n", shmp->pcb[0]->local_pid);
-  msg.mtype = getppid();
-  msg.test = 0;
-  
-  //sleep(3);
+  printf("child: msg.mi.local_id = %d\n", msg.mi.local_pid);
+  printf("child: msg.mi.sec = %d\n", msg.mi.sec);
+  msg.mtype = getpid();
+  msg.mi.sec = 0;
+  msg.mi.nanosec = 0;
+  msg.mi.sec += 1;
+  msg.mi.nanosec += 100;
+  printf("chid: here\n"); 
   msgsnd(msqid, &msg, sizeof(msg), 0);
 
+  do {
+    msgrcv(msqid, &msg, sizeof(msg), getpid(), 0);
+    msg.mi.status = 2;    
+    msg.mtype = getpid();
+    msgsnd(msqid, &msg, sizeof(msg), 0);
+    break;
+
+  }while(true);
+  printf("child: here 2\n");
   return 0;
 }

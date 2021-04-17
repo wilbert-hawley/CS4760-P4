@@ -13,11 +13,10 @@ int type_select(int x)
         return 0;   // io
 }
 
-struct proc_ctrl_block* init_pcb(int local) 
+//struct proc_ctrl_block* init_pcb(int local) 
+void init_pcb(int local, struct proc_ctrl_block* temp)
 {
-  struct proc_ctrl_block* temp = (struct proc_ctrl_block*) malloc(sizeof(struct proc_ctrl_block));
-  if (temp == NULL)
-    printf("h");
+  printf("here2\n");
   temp->cpu_sec = 0;
   temp->cpu_nanosec = 0;
   temp->sys_sec = 0;
@@ -32,5 +31,4 @@ struct proc_ctrl_block* init_pcb(int local)
   temp->done = false;
   // in use
   temp->full = true;
-  return temp;
 }

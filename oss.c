@@ -8,7 +8,9 @@ int main(int argc, char** argv) {
   printf("Compiled in oss.c\n");
 
   struct msgbuf msg;
-  msg.test = 1;
+  msg.mi.local_pid = -1;
+  msg.mi.sec = 0;
+  msg.mi.nanosec = 0;
 
   // set up shared memory
 
@@ -47,25 +49,43 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
   
-  shmp->pcb[0] = init_pcb(0);
-
-  int child = fork();
-
-  if(child == 0)
-    execl("./child_proc", "./child_proc", NULL);
-  else {
-    msg.mtype = child;
-    shmp->nanosec += 10;
-    // consider function to add to sec and subtract from nano
-    msgsnd(msqid, &msg, sizeof(msg), 0);  
-    msgrcv(msqid, &msg, sizeof(msg), getpid(), 0);
-    //wait(NULL);
-    printf("Child is done\n");
-    printf("msg.test = %d", msg.test);
+  //init_pcb(12, &shmp->pcb[0]);
+  int i = 0;
+  int queue[2];
+  for(; i < 2; i++) {
+    printf("i = %d\n", i );
+    init_pcb(i, &shmp->pcb[i]);
+    int child = fork();
+    switch(child) {
+      case -1:
+        printf("Failed to fork\n");
+        exit(1);
+      case 0:
+        execl("./child_proc", "./child_proc", NULL);
+      default:
+        queue[i] = child;
+        // adding time for creating child
+        shmp->nanosec += 10;
+        // consider function to add to sec and subtract from nano
+        // waiting for child to set up
+        msgrcv(msqid, &msg, sizeof(msg), child, 0);
+        printf("parent: msg.sec = %d\n", msg.mi.sec);
+        printf("parent: msg.nanosec = %d\n", msg.mi.nanosec);
+        shmp->sec += msg.mi.sec;
+        shmp->nanosec += msg.mi.nanosec;
+        printf("sec = %d, nanosec = %d\n", shmp->sec, shmp->nanosec);
+    }
   }
 
+  for(i = 0; i < 2; i++) {
+    msg.mtype = queue[i];
+    msgsnd(msqid, &msg, sizeof(msg), 0);
+    msgrcv(msqid, &msg, sizeof(msg), queue[i], 0);   
+    printf("status = %d", msg.mi.status);
+  }
+  
   // delete message queue
-  free(shmp->pcb[0]);
+  //free(shmp->pcb[0]);
   msgctl(msqid, IPC_RMID, NULL);
   shmctl(shmid, IPC_RMID, NULL);
   return 0;
