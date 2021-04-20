@@ -41,7 +41,8 @@ int main(int argc, char** argv) {
   printf("child_proc: Time: %ds %dns\n", shmp->sec, shmp->nanosec);
   printf("child: msg.mi.local_id = %d\n", msg.mi.local_pid);
   printf("child: msg.mi.sec = %d\n", msg.mi.sec);
-  msg.mtype = getpid();
+  msg.mtype = getppid();
+  //sleep(3);
   msg.mi.sec = 0;
   msg.mi.nanosec = 0;
   msg.mi.sec += 1;
@@ -52,7 +53,7 @@ int main(int argc, char** argv) {
   do {
     msgrcv(msqid, &msg, sizeof(msg), getpid(), 0);
     msg.mi.status = 2;    
-    msg.mtype = getpid();
+    msg.mtype = getppid();
     msgsnd(msqid, &msg, sizeof(msg), 0);
     break;
 

@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
         shmp->nanosec += 10;
         // consider function to add to sec and subtract from nano
         // waiting for child to set up
-        msgrcv(msqid, &msg, sizeof(msg), child, 0);
+        msgrcv(msqid, &msg, sizeof(msg), getpid(), 0);
         printf("parent: msg.sec = %d\n", msg.mi.sec);
         printf("parent: msg.nanosec = %d\n", msg.mi.nanosec);
         shmp->sec += msg.mi.sec;
@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
   for(i = 0; i < 2; i++) {
     msg.mtype = queue[i];
     msgsnd(msqid, &msg, sizeof(msg), 0);
-    msgrcv(msqid, &msg, sizeof(msg), queue[i], 0);   
+    msgrcv(msqid, &msg, sizeof(msg), getpid(), 0);   
     printf("status = %d", msg.mi.status);
   }
   

@@ -38,14 +38,17 @@ struct proc_ctrl_block {
                sys_sec,
                sys_nanosec,
                burst_sec,
-               burst_nanosec;
+               burst_nanosec,
+               block_sec,
+               block_nanosec;
   int local_pid;
   // 0 for io, 1 for cpu
   int type;	
   long real_pid;
   // keep track if it's finished or not
   bool done,
-       full;
+       full,
+       blocked;
 };
 
 int type_prob;
