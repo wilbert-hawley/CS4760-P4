@@ -15,6 +15,7 @@
 #include <sys/msg.h>
 #include <stdbool.h>
 #include <time.h>
+#include <limits.h>
 
 struct msg_info {
   int local_pid;
@@ -61,3 +62,20 @@ struct shmbuf {
   unsigned int nanosec;
   struct proc_ctrl_block pcb[19];
 };
+
+struct Queue {
+    int front, 
+        rear, 
+        size;
+    unsigned capacity;
+    int* pcb_index;
+};
+
+struct Queue* createQueue(unsigned);
+int isFull(struct Queue*);
+int isEmpty(struct Queue*);
+void enqueue(struct Queue*, int);
+int dequeue(struct Queue*);
+int front(struct Queue*);
+int rear(struct Queue*);
+bool empty_blocked_queue(int []);

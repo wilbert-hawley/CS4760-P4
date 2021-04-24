@@ -2,7 +2,6 @@
 
 
 int main(int argc, char** argv) {
-
   key_t sharedMemoryKey;
   if ((sharedMemoryKey = ftok("./utility.h", 0)) == ((key_t) - 1))
   { 
@@ -19,7 +18,10 @@ int main(int argc, char** argv) {
   }
 
   struct shmbuf *shmp = (struct shmbuf *)shmat(shmid, NULL, 0);
-  
+  // initialize pcb
+  int loc = atoi(argv[1]);
+  //init_pcb(loc, &shmp->pcb[loc]);
+  shmp->pcb[loc].real_pid = getpid();
   key_t messageKey;
   if ((messageKey = ftok("./README", 0)) == ((key_t) - 1))
   {
@@ -33,31 +35,55 @@ int main(int argc, char** argv) {
     perror("Error: Failed to create message queue\n");
     return EXIT_FAILURE;
   }
+  fprintf(stderr, "child: Child %d is prepared.\n", loc);
+  //sleep(2);
   struct msgbuf msg;
-  // wait for oss to send messag to run
- // msgrcv(msqid, &msg, sizeof(msg), getpid(), 0);
- 
-  printf("child_proc: Message recieved: %d\n", msg.mi.local_pid);
-  printf("child_proc: Time: %ds %dns\n", shmp->sec, shmp->nanosec);
-  printf("child: msg.mi.local_id = %d\n", msg.mi.local_pid);
-  printf("child: msg.mi.sec = %d\n", msg.mi.sec);
   msg.mtype = getppid();
-  //sleep(3);
   msg.mi.sec = 0;
   msg.mi.nanosec = 0;
-  msg.mi.sec += 1;
-  msg.mi.nanosec += 100;
-  printf("chid: here\n"); 
+  //printf("child: Child %d is prepared.\n", loc);
   msgsnd(msqid, &msg, sizeof(msg), 0);
-
+  int x = 0;
+  //sleep(3);
   do {
     msgrcv(msqid, &msg, sizeof(msg), getpid(), 0);
-    msg.mi.status = 2;    
-    msg.mtype = getppid();
-    msgsnd(msqid, &msg, sizeof(msg), 0);
-    break;
-
+    fprintf(stderr, "child: Child %d recieved parent message, proceeding...\n", loc);
+    //msg.mtype = getppid();
+    printf("child: Child %d: x = %d\n", loc, x);
+    // if blocked: 
+    if(x == 0) {
+      printf("child: Child %d is blocked, sending message back.\n", loc);
+      shmp->pcb[loc].blocked = true;
+      msg.mtype = getppid();
+      printf("child: message type = %ld\n", msg.mtype);
+      msg.mi.sec = 0;
+      msg.mi.nanosec = 150000;
+      msg.mi.status = 1;
+      msgsnd(msqid, &msg, sizeof(msg), 0); 
+    }
+    // if finished with proc:
+    else if(x > 3) {
+      printf("child: Child %d is finished, sending message back.\n", loc);
+      shmp->pcb[loc].done = true;
+      msg.mtype = getppid();
+      printf("child: message type = %ld\n", msg.mtype);
+      msg.mi.sec = 0;
+      msg.mi.nanosec = 460000;
+      msg.mi.status = 3;
+      msgsnd(msqid, &msg, sizeof(msg), 0);
+      break;
+    }
+    else if(x > 0 && x < 4) {
+      printf("child: Child %d is not done yet, so put back on ready queue.\n", loc);
+      msg.mtype = getppid();
+      printf("child: message type = %ld\n", msg.mtype);
+      msg.mi.sec = 0;
+      msg.mi.nanosec = 10000000;
+      msg.mi.status = 0;
+      msgsnd(msqid, &msg, sizeof(msg), 0);
+    }
+    x++;
   }while(true);
-  printf("child: here 2\n");
+  printf("child: Child %d finished\n", loc);
   return 0;
 }
