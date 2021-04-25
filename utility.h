@@ -41,7 +41,9 @@ struct proc_ctrl_block {
                burst_sec,
                burst_nanosec,
                block_sec,
-               block_nanosec;
+               block_nanosec,
+               total_cpu_sec,
+               total_cpu_nanosec;
   int local_pid;
   // 0 for io, 1 for cpu
   int type;	

@@ -25,8 +25,8 @@ int main(int argc, char** argv) {
   shmp->pcb[loc].type = true;
   shmp->pcb[loc].done = false;
   shmp->pcb[loc].blocked = false;
-  shmp->pcb[loc].cpu_sec = loc % 2;
-  shmp->pcb[loc].cpu_nanosec = 500000000;
+  shmp->pcb[loc].cpu_sec = 0;
+  shmp->pcb[loc].cpu_nanosec = 75000000;
   printf("Child %d will run on cpu for %d.%d\n", loc, shmp->pcb[loc].cpu_sec,
           shmp->pcb[loc].cpu_nanosec); 
   unsigned finish_sec = 0;
@@ -77,13 +77,19 @@ int main(int argc, char** argv) {
     msgrcv(msqid2, &msg2, sizeof(msg2), getpid(), 0);
     fprintf(stderr, "child: Child %d recieved parent message, proceeding...\n", loc);
     msg1.mtype = getppid();
-    //if( finish_sec < 
+     
     time_sub(shmp->pcb[loc].cpu_sec,shmp->pcb[loc].cpu_nanosec, finish_sec,
              finish_nanosec, &diff_sec, &diff_nanosec); 
     //if interupted
     if(type_select(INTERUPT_PROB, x + loc)) {
       printf("child: Child %d is interupted, sending message back.\n", loc);
       shmp->pcb[loc].done = true;
+      shmp->pcb[loc].total_cpu_sec = finish_sec;
+      shmp->pcb[loc].total_cpu_nanosec = finish_nanosec + 150000;
+      if(shmp->pcb[loc].total_cpu_nanosec >= 1000000000) {
+        shmp->pcb[loc].total_cpu_sec++;
+        shmp->pcb[loc].total_cpu_nanosec -= 1000000000;
+      }
       msg1.mi.sec = 0;
       msg1.mi.nanosec = 150000;
       msg1.mi.status = 1;
@@ -115,6 +121,12 @@ int main(int argc, char** argv) {
     else if(diff_sec == 0 && diff_nanosec < 10000000) {
       printf("child: Child %d is finished, sending message back.\n", loc);
       shmp->pcb[loc].done = true;
+      shmp->pcb[loc].total_cpu_sec = finish_sec;
+      shmp->pcb[loc].total_cpu_nanosec = finish_nanosec + diff_nanosec;
+      if(shmp->pcb[loc].total_cpu_nanosec >= 1000000000) {
+        shmp->pcb[loc].total_cpu_sec++;
+        shmp->pcb[loc].total_cpu_nanosec -= 1000000000;
+      } 
       msg1.mi.sec = 0;
       msg1.mi.nanosec = diff_nanosec;
       msg1.mi.status = 3;

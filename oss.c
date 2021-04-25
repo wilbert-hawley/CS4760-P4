@@ -219,7 +219,8 @@ int main(int argc, char** argv) {
         }
       }
       else if(shmp->pcb[cur_proc].done) {
-        //printf("oss: Child %d is done, detaching from shared memory\n", cur_proc);
+        printf("oss: Child %d is done, ran for %d.%d seconds.\n", cur_proc,
+                shmp->pcb[cur_proc].total_cpu_sec, shmp->pcb[cur_proc].total_cpu_nanosec);
         shmp->pcb[cur_proc].full = false;
         shmp->nanosec += 5000;
         if(shmp->nanosec > 1000000000) {
