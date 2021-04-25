@@ -52,8 +52,10 @@ struct proc_ctrl_block {
        blocked;
 };
 
-int type_prob;
-int type_select(int);
+int TYPE_PROB;
+int BLOCKED_PROB;
+int INTERUPT_PROB;
+int type_select(int, int);
 //struct proc_ctrl_block* init_pcb(int);
 void init_pcb(int, struct proc_ctrl_block*); 
 

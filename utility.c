@@ -1,16 +1,18 @@
 #include "utility.h"
 
-int type_prob = 90;
+int TYPE_PROB = 80;
+int BLOCKED_PROB = 20;
+int INTERUPT_PROB = 10;
 
-int type_select(int x)
+int type_select(int prob, int x)
 {
     time_t t;
-    srand((unsigned) time(&t) + (x*100));
+    srand((unsigned) time(&t) + getpid() + x);
     int r = rand() % 100;
-    if(r < type_prob)
-        return 1;   // cpu
+    if(r < prob)
+        return 1;   // cpu, blocked, interupted
     else
-        return 0;   // io
+        return 0;   // io, not blocked, not interupted
 }
 
 //struct proc_ctrl_block* init_pcb(int local) 
@@ -25,7 +27,7 @@ void init_pcb(int local, struct proc_ctrl_block* temp)
   temp->burst_nanosec = 0;
   temp->local_pid = local;
   // 0 for io, 1 for cpu
-  temp->type = type_select(local);
+  temp->type = type_select(TYPE_PROB, local);
   temp->real_pid = getpid();
   // keep track if it's finished or not
   temp->done = false;

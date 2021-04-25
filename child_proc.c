@@ -83,51 +83,49 @@ int main(int argc, char** argv) {
   msgsnd(msqid1, &msg1, sizeof(msg1), 0);
 
   int x = 0;
-  //sleep(3);
   do {
-    //msgrcv(msqid, &msg, sizeof(msg), getpid(), 0);
     msgrcv(msqid2, &msg2, sizeof(msg2), getpid(), 0);
-    //printf("child: top of loop, msg.mtype = %d\n", msg.mtype);
     fprintf(stderr, "child: Child %d recieved parent message, proceeding...\n", loc);
-    //msg.mtype = getppid();
-    //printf("child: Child %d: x = %d\n", loc, x);
-    // if blocked: 
-    if(x == 0) {
-      printf("child: Child %d is blocked, sending message back.\n", loc);
-      shmp->pcb[loc].blocked = true;
-      msg1.mtype = getppid();
-      //printf("child: message type = %ld\n", msg.mtype);
-      //sleep(1);
+    msg1.mtype = getppid();
+    //if interupted
+    if(type_select(INTERUPT_PROB, x)) {
+      printf("child: Child %d is interupted, sending message back.\n", loc);
+      shmp->pcb[loc].done = true;
       msg1.mi.sec = 0;
       msg1.mi.nanosec = 150000;
       msg1.mi.status = 1;
       msgsnd(msqid1, &msg1, sizeof(msg1), 0);
-      //sleep(1); 
+      break;
+    }
+    // if blocked: 
+    else if(type_select(BLOCKED_PROB, (x + 1))) {
+      printf("child: Child %d is blocked, sending message back.\n", loc);
+      shmp->pcb[loc].blocked = true;
+      msg1.mi.sec = 0;
+      msg1.mi.nanosec = 150000;
+      msg1.mi.status = 2;
+      msgsnd(msqid1, &msg1, sizeof(msg1), 0);
     }
     // if finished with proc:
-    else if(x > 3) {
+    else if(x >= 2) {
       printf("child: Child %d is finished, sending message back.\n", loc);
       shmp->pcb[loc].done = true;
-      msg1.mtype = getppid();
-      //printf("child: message type = %ld\n", msg.mtype);
-      //sleep(1);
       msg1.mi.sec = 0;
       msg1.mi.nanosec = 460000;
       msg1.mi.status = 3;
       msgsnd(msqid1, &msg1, sizeof(msg1), 0);
-      //sleep(1);
       break;
     }
-    else if(x > 0 && x < 4) {
+    else if(x < 2) {
       printf("child: Child %d is not done yet, so put back on ready queue.\n", loc);
-      msg1.mtype = getppid();
-      //printf("child: message type = %ld\n", msg.mtype);
-      //sleep(1);
       msg1.mi.sec = 0;
       msg1.mi.nanosec = 10000000;
       msg1.mi.status = 0;
       msgsnd(msqid1, &msg1, sizeof(msg1), 0);
       //sleep(1);
+    }
+    else{
+      fprintf(stderr, "something broke. x = %d\n", x);
     }
     x++;
   }while(true);
