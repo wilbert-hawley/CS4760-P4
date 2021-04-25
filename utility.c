@@ -1,13 +1,13 @@
 #include "utility.h"
 
 int TYPE_PROB = 80;
-int BLOCKED_PROB = 20;
-int INTERUPT_PROB = 10;
-
+int BLOCKED_PROB = 10;
+int INTERUPT_PROB = 5;
+// funciton to make random decisions
 int type_select(int prob, int x)
 {
     time_t t;
-    srand((unsigned) time(&t) + getpid() + x);
+    srand((unsigned) time(&t) + (getpid() * x));
     int r = rand() % 100;
     if(r < prob)
         return 1;   // cpu, blocked, interupted
@@ -18,7 +18,6 @@ int type_select(int prob, int x)
 //struct proc_ctrl_block* init_pcb(int local) 
 void init_pcb(int local, struct proc_ctrl_block* temp)
 {
-  //printf("here2\n");
   temp->cpu_sec = 0;
   temp->cpu_nanosec = 0;
   temp->sys_sec = 0;
@@ -97,6 +96,7 @@ int rear(struct Queue* queue)
     return queue->pcb_index[queue->rear];
 }
 
+// check whether the blocked queue is empty
 bool empty_blocked_queue(int arr[])
 {
   int i;
@@ -106,4 +106,36 @@ bool empty_blocked_queue(int arr[])
     }
   }
   return true;
+}
+
+// funciton to find the difference between two times
+void time_sub(unsigned x_sec, unsigned x_nano, unsigned y_sec, unsigned y_nano, 
+              unsigned *a_sec, unsigned *a_nano) {
+  if(y_sec > x_sec) {
+    if(y_nano >= x_nano) 
+      *a_nano = y_nano - x_nano;
+    else {
+      y_sec--;       
+      y_nano += 1000000000;
+      *a_nano = y_nano - x_nano;
+    }
+    *a_sec = y_sec - x_sec;
+  }
+  else if(x_sec > y_sec) {
+    if(x_nano >= y_nano) 
+      *a_nano = x_nano - y_nano;
+    else {
+      x_sec--;
+      x_nano += 1000000000;
+      *a_nano = x_nano - y_nano;
+    }
+    *a_sec = x_sec - y_sec;
+  }
+  else{
+    *a_sec = 0;
+    if(y_nano >= x_nano) 
+      *a_nano = y_nano - x_nano;
+    else
+      *a_nano = x_nano - y_nano;
+  }
 }

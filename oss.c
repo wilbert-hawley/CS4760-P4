@@ -97,6 +97,7 @@ int main(int argc, char** argv) {
   }
   int pcb_index = -1;
   i = 0;
+  int last = -1;
   while(true) {
     shmp->nanosec += 10000000;
     if(shmp->nanosec > 1000000000) {
@@ -104,7 +105,7 @@ int main(int argc, char** argv) {
       shmp->nanosec -= 1000000000;
     } 
     //printf("oss: Top of loop. Time: shmp->sec = %d, shmp->nanosec = %d\n", shmp->sec, shmp->nanosec);
-    if(shmp->sec >= 10) {
+    if(shmp->sec >= 25) {
       stop = true;
       if(isEmpty(ready_queue) && empty_blocked_queue(blocked)) {
         break;
@@ -113,27 +114,30 @@ int main(int argc, char** argv) {
 
     if(shmp->sec >= next_proc_sec && !stop) {
       printf("oss: Attempting to create next process. Time: shmp->sec = %d, shmp->nanosec = %d\n", shmp->sec, shmp->nanosec);
-      printf("oss: i = %d ~~~~~~~~~~~\n", i); 
+      //printf("oss: i = %d ~~~~~~~~~~~\n", i); 
       next_proc_sec++;
       if(i < 19) {
         pcb_index = i;
         i++;
-        printf("oss: hereeeeeeeeeeeeeeeeeeeee\n");
+        //printf("oss: hereeeeeeeeeeeeeeeeeeeee\n");
       }
       else {
         pcb_index = -1;
         int j;
         for(j = 0; j < 19; j++) {
           if(!shmp->pcb[j].full) {
+            if(last == j)
+              continue;
             pcb_index = j;
-            printf("oss: hereeeeeeeeeeeeeeeeeeeee2\n");
+            last = j;
+            //printf("oss: hereeeeeeeeeeeeeeeeeeeee2\n");
             i++;
 	    shmp->pcb[pcb_index].full = true;
 	    break;
           }
         }
       }
-      printf("oss: pcb_index = %d\n", pcb_index);
+      //printf("oss: pcb_index = %d\n", pcb_index);
       if(pcb_index != -1) {
         int child = fork();
         switch(child) {
@@ -187,7 +191,7 @@ int main(int argc, char** argv) {
       msg2.mi.nanosec = 0;
       msgsnd(msqid2, &msg2, sizeof(msg2), 0);
       // wait for process to send message back
-      fprintf(stderr, "oss: Waiting for Child %d\n", cur_proc);
+      //fprintf(stderr, "oss: Waiting for Child %d\n", cur_proc);
       msgrcv(msqid1, &msg1, sizeof(msg1), getpid(), 0);
       shmp->sec += msg1.mi.sec;
       shmp->nanosec += msg1.mi.nanosec;
@@ -215,7 +219,7 @@ int main(int argc, char** argv) {
         }
       }
       else if(shmp->pcb[cur_proc].done) {
-        printf("oss: Child %d is done, detaching from shared memory\n", cur_proc);
+        //printf("oss: Child %d is done, detaching from shared memory\n", cur_proc);
         shmp->pcb[cur_proc].full = false;
         shmp->nanosec += 5000;
         if(shmp->nanosec > 1000000000) {
@@ -224,7 +228,7 @@ int main(int argc, char** argv) {
         }
       }
       else {
-        printf("oss: Child %d is not done yet, going back on queue\n", cur_proc);	
+        //printf("oss: Child %d is not done yet, going back on queue\n", cur_proc);	
         enqueue(ready_queue, cur_proc);
         shmp->nanosec += 10000;
         if(shmp->nanosec > 1000000000) {

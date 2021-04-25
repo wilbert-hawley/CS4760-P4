@@ -19,31 +19,17 @@ int main(int argc, char** argv) {
 
   struct shmbuf *shmp = (struct shmbuf *)shmat(shmid, NULL, 0);
   // initialize pcb
-  int loc = atoi(argv[1]);
-  //init_pcb(loc, &shmp->pcb[loc]);
+  int loc = atoi(argv[1]); 
   shmp->pcb[loc].real_pid = getpid();
-  /*key_t messageKey;
-  if ((messageKey = ftok("./README", 0)) == ((key_t) - 1))
-  {
-    fprintf(stderr, "%s: ", argv[0]);
-    perror("Error: Failed to derive key from README\n");
-    exit(EXIT_FAILURE);
-  }
-  int msqid;
-  if ((msqid = msgget(messageKey, IPC_CREAT | 0600 )) == -1)
-  {
-    perror("Error: Failed to create message queue\n");
-    return EXIT_FAILURE;
-  }
-  fprintf(stderr, "child: Child %d is prepared.\n", loc);
-  //sleep(2);
-  struct msgbuf msg;
-  msg.mtype = getppid();
-  msg.mi.sec = 0;
-  msg.mi.nanosec = 0;
-  //printf("child: Child %d is prepared.\n", loc);
-  msgsnd(msqid, &msg, sizeof(msg), 0);*/
-
+  shmp->pcb[loc].type = type_select(TYPE_PROB, ((loc * shmp->sec) + getpid()));
+  shmp->pcb[loc].type = true;
+  shmp->pcb[loc].done = false;
+  shmp->pcb[loc].blocked = false;
+  shmp->pcb[loc].cpu_sec = loc % 2;
+  shmp->pcb[loc].cpu_nanosec = 500000000;
+  printf("Child %d will run on cpu for %d.%d\n", loc, shmp->pcb[loc].cpu_sec,
+          shmp->pcb[loc].cpu_nanosec); 
+  
   key_t messageKey1;
   if ((messageKey1 = ftok("./README", 0)) == ((key_t) - 1))
   {
@@ -88,7 +74,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "child: Child %d recieved parent message, proceeding...\n", loc);
     msg1.mtype = getppid();
     //if interupted
-    if(type_select(INTERUPT_PROB, x)) {
+    if(type_select(INTERUPT_PROB, x + loc)) {
       printf("child: Child %d is interupted, sending message back.\n", loc);
       shmp->pcb[loc].done = true;
       msg1.mi.sec = 0;
@@ -98,8 +84,8 @@ int main(int argc, char** argv) {
       break;
     }
     // if blocked: 
-    else if(type_select(BLOCKED_PROB, (x + 1))) {
-      printf("child: Child %d is blocked, sending message back.\n", loc);
+    else if(type_select(BLOCKED_PROB, ((x * loc) + 11 + x))) {
+      //printf("child: Child %d is blocked, sending message back.\n", loc);
       shmp->pcb[loc].blocked = true;
       shmp->pcb[loc].block_sec = shmp->sec + 2;
       shmp->pcb[loc].block_nanosec = shmp->nanosec + 2;
