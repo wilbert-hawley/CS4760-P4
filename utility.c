@@ -25,6 +25,8 @@ void init_pcb(int local, struct proc_ctrl_block* temp)
   temp->sys_nanosec = 0;
   temp->burst_sec = 0;
   temp->burst_nanosec = 0;
+  temp->block_sec = 0;
+  temp->block_nanosec = 0;
   temp->local_pid = local;
   // 0 for io, 1 for cpu
   temp->type = type_select(TYPE_PROB, local);

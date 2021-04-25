@@ -162,10 +162,14 @@ int main(int argc, char** argv) {
     for(l = 0; l < 19; l++) {
       if(blocked[l] != -1) {
         int ind = blocked[l];
-        printf("oss: Child %d moving from blocked to ready queue\n", ind);
-        enqueue(ready_queue, ind);
-        shmp->pcb[ind].blocked = false;
-        blocked[l] = -1;
+        if(shmp->sec >= shmp->pcb[ind].block_sec) {
+          if(shmp->nanosec >= shmp->pcb[ind].block_nanosec) {
+            printf("oss: Child %d moving from blocked to ready queue\n", ind);
+            enqueue(ready_queue, ind);
+            shmp->pcb[ind].blocked = false;
+            blocked[l] = -1;
+          } 
+        }
       }
     }
     shmp->nanosec += 200000;

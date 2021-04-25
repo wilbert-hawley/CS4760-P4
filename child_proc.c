@@ -101,6 +101,10 @@ int main(int argc, char** argv) {
     else if(type_select(BLOCKED_PROB, (x + 1))) {
       printf("child: Child %d is blocked, sending message back.\n", loc);
       shmp->pcb[loc].blocked = true;
+      shmp->pcb[loc].block_sec = shmp->sec + 2;
+      shmp->pcb[loc].block_nanosec = shmp->nanosec + 2;
+      printf("child: Child %d blocked until %d.%d~~~~~~~~\n", loc, 
+             shmp->pcb[loc].block_sec, shmp->pcb[loc].block_nanosec);
       msg1.mi.sec = 0;
       msg1.mi.nanosec = 150000;
       msg1.mi.status = 2;
