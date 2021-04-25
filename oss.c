@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
       shmp->nanosec -= 1000000000;
     } 
     //printf("oss: Top of loop. Time: shmp->sec = %d, shmp->nanosec = %d\n", shmp->sec, shmp->nanosec);
-    if(shmp->sec >= 25) {
+    if(shmp->sec >= 5) {
       stop = true;
       if(isEmpty(ready_queue) && empty_blocked_queue(blocked)) {
         break;

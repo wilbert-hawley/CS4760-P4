@@ -29,7 +29,11 @@ int main(int argc, char** argv) {
   shmp->pcb[loc].cpu_nanosec = 500000000;
   printf("Child %d will run on cpu for %d.%d\n", loc, shmp->pcb[loc].cpu_sec,
           shmp->pcb[loc].cpu_nanosec); 
-  
+  unsigned finish_sec = 0;
+  unsigned finish_nanosec = 0;
+  unsigned diff_sec = 0,
+           diff_nanosec = 0;
+ 
   key_t messageKey1;
   if ((messageKey1 = ftok("./README", 0)) == ((key_t) - 1))
   {
@@ -67,12 +71,15 @@ int main(int argc, char** argv) {
   msg1.mi.sec = 0;
   msg1.mi.nanosec = 0;
   msgsnd(msqid1, &msg1, sizeof(msg1), 0);
-
+  bool flag = false;
   int x = 0;
   do {
     msgrcv(msqid2, &msg2, sizeof(msg2), getpid(), 0);
     fprintf(stderr, "child: Child %d recieved parent message, proceeding...\n", loc);
     msg1.mtype = getppid();
+    //if( finish_sec < 
+    time_sub(shmp->pcb[loc].cpu_sec,shmp->pcb[loc].cpu_nanosec, finish_sec,
+             finish_nanosec, &diff_sec, &diff_nanosec); 
     //if interupted
     if(type_select(INTERUPT_PROB, x + loc)) {
       printf("child: Child %d is interupted, sending message back.\n", loc);
@@ -96,17 +103,8 @@ int main(int argc, char** argv) {
       msg1.mi.status = 2;
       msgsnd(msqid1, &msg1, sizeof(msg1), 0);
     }
-    // if finished with proc:
-    else if(x >= 2) {
-      printf("child: Child %d is finished, sending message back.\n", loc);
-      shmp->pcb[loc].done = true;
-      msg1.mi.sec = 0;
-      msg1.mi.nanosec = 460000;
-      msg1.mi.status = 3;
-      msgsnd(msqid1, &msg1, sizeof(msg1), 0);
-      break;
-    }
-    else if(x < 2) {
+    //else if(x < 2) {
+    else if(diff_sec > 0 || diff_nanosec >= 10000000) { 
       printf("child: Child %d is not done yet, so put back on ready queue.\n", loc);
       msg1.mi.sec = 0;
       msg1.mi.nanosec = 10000000;
@@ -114,8 +112,23 @@ int main(int argc, char** argv) {
       msgsnd(msqid1, &msg1, sizeof(msg1), 0);
       //sleep(1);
     }
+    else if(diff_sec == 0 && diff_nanosec < 10000000) {
+      printf("child: Child %d is finished, sending message back.\n", loc);
+      shmp->pcb[loc].done = true;
+      msg1.mi.sec = 0;
+      msg1.mi.nanosec = diff_nanosec;
+      msg1.mi.status = 3;
+      msgsnd(msqid1, &msg1, sizeof(msg1), 0);
+      break;
+    }
     else{
-      fprintf(stderr, "something broke. x = %d\n", x);
+      fprintf(stderr, "child: something broke. x = %d\n", x);
+    }
+    finish_sec += msg1.mi.sec;
+    finish_nanosec += msg1.mi.nanosec;
+    if(finish_nanosec >= 1000000000) {
+      finish_sec++;
+      finish_nanosec -= 1000000000;
     }
     x++;
   }while(true);
