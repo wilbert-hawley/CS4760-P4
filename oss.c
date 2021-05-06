@@ -168,7 +168,6 @@ int main(int argc, char** argv) {
   m = 0;
   int last = -1;
   while(true) {
-    //shmp->nanosec += 10000000;
     // advance cloced by 1.xx seconds on each loop (xx between 0-1000ns)
     shmp->sec++;
     shmp->nanosec += rand() % 1001;
@@ -176,13 +175,14 @@ int main(int argc, char** argv) {
       shmp->sec += 1;
       shmp->nanosec -= 1000000000;
     }
-
-    
  
     printf("oss: Top of loop. Time: shmp->sec = %d, shmp->nanosec = %d\n", shmp->sec, shmp->nanosec);
     printf("oss: next_proc_sec = %d, next_proc_nanosec = %d\n", next_proc_sec, next_proc_nanosec);
-    if(shmp->sec >= 5) {
+   // if(shmp->sec >= 10) {
+   // printf("oss: i = %d ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", i);
+    if(i > 10) { 
       stop = true;
+     // break;
       if(isEmpty(ready_queue) && empty_blocked_queue(blocked)) {
         break;
       }
@@ -198,10 +198,10 @@ int main(int argc, char** argv) {
         next_proc_nanosec -= 1000000000;
       }
 
+      // find an open spot on the pcb
       if(i < 19) {
         pcb_index = i;
         i++;
-        //printf("oss: hereeeeeeeeeeeeeeeeeeeee\n");
       }
       else {
         pcb_index = -1;
@@ -212,14 +212,14 @@ int main(int argc, char** argv) {
               continue;
             pcb_index = j;
             last = j;
-            //printf("oss: hereeeeeeeeeeeeeeeeeeeee2\n");
             i++;
 	    shmp->pcb[pcb_index].full = true;
 	    break;
           }
         }
       }
-      //printf("oss: pcb_index = %d\n", pcb_index);
+
+      // if there is an available spot in the pcb, dispatch a new process
       if(pcb_index != -1) {
         int child = fork();
         switch(child) {
@@ -241,9 +241,16 @@ int main(int argc, char** argv) {
             }
             printf("oss: Child %d placed on queue\n", pcb_index);
             enqueue(ready_queue, pcb_index);
+            // adnvace clock between 100 to 10000ns when dispatching
+            shmp->nanosec += (rand() % 9900) + 100;
+            if(shmp->nanosec > 1000000000) {
+              shmp->sec += 1;
+              shmp->nanosec -= 1000000000;
+            }
         }
       }
     }
+
     // check blocked queue, place any expired onto que
     int l;
     for(l = 0; l < 19; l++) {
@@ -255,10 +262,17 @@ int main(int argc, char** argv) {
             enqueue(ready_queue, ind);
             shmp->pcb[ind].blocked = false;
             blocked[l] = -1;
+            // adding to clock from transitions from blocked to ready queue
+            shmp->nanosec += 1500000;
+            if(shmp->nanosec > 1000000000) {
+              shmp->sec += 1;
+              shmp->nanosec -= 1000000000;
+            }
           } 
         }
       }
     }
+    // add time to clock for going through blocked queue
     shmp->nanosec += 200000;
     if(shmp->nanosec > 1000000000) {
       shmp->sec += 1;
@@ -323,7 +337,7 @@ int main(int argc, char** argv) {
     }
 
   }
-
+  processKiller();
  
   // delete message queue;
   msgctl(msqid1, IPC_RMID, NULL);
