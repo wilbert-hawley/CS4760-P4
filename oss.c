@@ -149,12 +149,19 @@ int main(int argc, char** argv) {
   struct msgbuf msg1;
   // messages from parent to child
   struct msgbuf msg2;
-
+ 
+  // setting up a timer to stop creating new processes
+  time_t end;
+  time_t start = time(0);
+  time_t total = 1;
+  end = start + total;
+ 
+  // vars to hold when to create new processes
   srand(time(0) * getpid());
   unsigned next_proc_sec = rand() % (maxTimeBetweenNewProcsSecs + 1);
   unsigned next_proc_nanosec = rand() % (maxTimeBetweenNewProcsNS + 1);
   int pid = getpid();
-  printf("oss: Parent pid = %d\n", pid);
+  // set up two queues
   struct Queue* ready_queue = createQueue(19);
   int blocked[19];
   bool stop = false;
@@ -167,6 +174,8 @@ int main(int argc, char** argv) {
   i = 0;
   m = 0;
   int last = -1;
+ 
+  // begin the main loop
   while(true) {
     // advance cloced by 1.xx seconds on each loop (xx between 0-1000ns)
     shmp->sec++;
@@ -178,10 +187,14 @@ int main(int argc, char** argv) {
  
     printf("oss: Top of loop. Time: shmp->sec = %d, shmp->nanosec = %d\n", shmp->sec, shmp->nanosec);
     printf("oss: next_proc_sec = %d, next_proc_nanosec = %d\n", next_proc_sec, next_proc_nanosec);
-   // if(shmp->sec >= 10) {
-   // printf("oss: i = %d ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", i);
-    if(i > 10) { 
-      stop = true;
+    // if(shmp->sec >= 10) {
+    printf("oss: i = %d ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", i);
+   
+    start = time(NULL);
+
+   if(i > 20 || start > end) { 
+  // if(start > end) { 
+     stop = true;
      // break;
       if(isEmpty(ready_queue) && empty_blocked_queue(blocked)) {
         break;
@@ -225,7 +238,7 @@ int main(int argc, char** argv) {
         switch(child) {
           case -1:
             printf("Failed to fork\n");
-            exit(1);
+            processKiller();
           case 0: ;
             char num2[50];
             sprintf(num2, "%d", pcb_index);
