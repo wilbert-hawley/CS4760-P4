@@ -84,3 +84,5 @@ int front(struct Queue*);
 int rear(struct Queue*);
 bool empty_blocked_queue(int []);
 void time_sub(unsigned, unsigned, unsigned, unsigned, unsigned*, unsigned*);
+unsigned int maxTimeBetweenNewProcsNS;
+unsigned int maxTimeBetweenNewProcsSecs;

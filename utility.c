@@ -139,3 +139,6 @@ void time_sub(unsigned x_sec, unsigned x_nano, unsigned y_sec, unsigned y_nano,
       *a_nano = x_nano - y_nano;
   }
 }
+
+unsigned int maxTimeBetweenNewProcsNS = 1000;
+unsigned int maxTimeBetweenNewProcsSecs = 2;

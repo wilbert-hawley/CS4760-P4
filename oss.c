@@ -1,16 +1,100 @@
 #include "utility.h"
 
+// shared memeory variables
 struct shmbuf *shmp;
 int shmid;
+int msqid1;
+int msqid2;
+int pid_arr[200];
+
+void processKiller()
+{
+  int k = 0;
+  for(; k < 200; k++) {
+    if(pid_arr[k] == 0)
+      break;
+    kill(pid_arr[k], SIGTERM);
+  }
+  shmdt(shmp);
+  msgctl(msqid1, IPC_RMID, NULL);
+  msgctl(msqid2, IPC_RMID, NULL);
+  shmctl(shmid, IPC_RMID, NULL);
+  exit(0);
+}
+
+int setupTimer(int time)
+{
+  struct itimerval value;
+
+  value.it_interval.tv_sec = time;
+  value.it_interval.tv_usec = 0;
+  value.it_value = value.it_interval;
+
+  return setitimer(ITIMER_REAL, &value, NULL);
+}
+
+void sig_alrm_handler()
+{
+  fprintf(stderr, "master:");
+  perror("Time limit reached!");
+  processKiller();
+  exit(1);
+}
+
+int timerInterrupt()
+{
+  struct sigaction act;
+
+  act.sa_handler = sig_alrm_handler;
+  act.sa_flags = 0;
+
+  return (sigemptyset(&act.sa_mask) || sigaction(SIGALRM, &act, NULL));
+}
+
+void sig_int_handler()
+{
+    fprintf(stderr, "master:");
+    perror("ctrl-c interupt, all children terminated.\n");
+    processKiller();
+}
+
+
+int start_ctrlc_int_handler()
+{
+  struct sigaction act;
+
+  act.sa_handler = sig_int_handler;
+  act.sa_flags = 0;
+
+  return (sigemptyset(&act.sa_mask) || sigaction(SIGINT, &act, NULL));
+}
+
 
 int main(int argc, char** argv) {
 
-  printf("Compiled in oss.c\n");
+  // initialize an array to hold child pid
+  int m = 0;
+  for(; m < 200; m++)
+    pid_arr[m] = 0;
 
-  //struct msgbuf msg;
-  //msg.mi.local_pid = -1;
-  //msg.mi.sec = 0;
-  //msg.mi.nanosec = 0;
+  // set up handlers
+  if (setupTimer(time) == -1) {
+    fprintf(stderr, "%s: ", argv[0]);
+    perror("Failed to set up the ITIMER_REAL interval timer");
+    exit(1);;
+  }
+
+  if (timerInterrupt() == -1) {
+    fprintf(stderr, "%s: ", argv[0]);
+    perror("Failed to set up the inturrept SIGALRM");
+    exit(1);
+  } 
+
+  if (start_ctrlc_int_handler() == -1) {
+    fprintf(stderr, "%s: ", argv[0]);
+    perror("Failed to set up the SIGINT handler\n");
+    exit(1);
+  }
 
   // set up shared memory
 
@@ -35,21 +119,6 @@ int main(int argc, char** argv) {
   shmp->nanosec = 0;
 
   // set up message queue:
-  /*key_t messageKey;
-  if ((messageKey = ftok("./README", 0)) == ((key_t) - 1))
-  {
-    fprintf(stderr, "%s: ", argv[0]);
-    perror("Error: Failed to derive key from README\n");
-    exit(EXIT_FAILURE);
-  }
-  int msqid;
-  if ((msqid = msgget(messageKey, IPC_CREAT | 0600 )) == -1)
-  {
-    perror("Error: Failed to create message queue\n");
-    return EXIT_FAILURE;
-  }*/
-
-
   key_t messageKey1;
   if ((messageKey1 = ftok("./README", 0)) == ((key_t) - 1))
   {
@@ -57,7 +126,6 @@ int main(int argc, char** argv) {
     perror("Error: Failed to derive key from README\n");
     exit(EXIT_FAILURE);
   }
-  int msqid1;
   if ((msqid1 = msgget(messageKey1, IPC_CREAT | 0600 )) == -1)
   {
     perror("Error: Failed to create message queue\n");
@@ -71,7 +139,6 @@ int main(int argc, char** argv) {
     perror("Error: Failed to derive key from README\n");
     exit(EXIT_FAILURE);
   }
-  int msqid2;
   if ((msqid2 = msgget(messageKey1, IPC_CREAT | 0600 )) == -1)
   {
     perror("Error: Failed to create message queue\n");
@@ -83,8 +150,9 @@ int main(int argc, char** argv) {
   // messages from parent to child
   struct msgbuf msg2;
 
-  
-  unsigned next_proc_sec = 1;
+  srand(time(0) * getpid());
+  unsigned next_proc_sec = rand() % (maxTimeBetweenNewProcsSecs + 1);
+  unsigned next_proc_nanosec = rand() % (maxTimeBetweenNewProcsNS + 1);
   int pid = getpid();
   printf("oss: Parent pid = %d\n", pid);
   struct Queue* ready_queue = createQueue(19);
@@ -97,14 +165,22 @@ int main(int argc, char** argv) {
   }
   int pcb_index = -1;
   i = 0;
+  m = 0;
   int last = -1;
   while(true) {
-    shmp->nanosec += 10000000;
+    //shmp->nanosec += 10000000;
+    // advance cloced by 1.xx seconds on each loop (xx between 0-1000ns)
+    shmp->sec++;
+    shmp->nanosec += rand() % 1001;
     if(shmp->nanosec > 1000000000) {
       shmp->sec += 1;
       shmp->nanosec -= 1000000000;
-    } 
-    //printf("oss: Top of loop. Time: shmp->sec = %d, shmp->nanosec = %d\n", shmp->sec, shmp->nanosec);
+    }
+
+    
+ 
+    printf("oss: Top of loop. Time: shmp->sec = %d, shmp->nanosec = %d\n", shmp->sec, shmp->nanosec);
+    printf("oss: next_proc_sec = %d, next_proc_nanosec = %d\n", next_proc_sec, next_proc_nanosec);
     if(shmp->sec >= 5) {
       stop = true;
       if(isEmpty(ready_queue) && empty_blocked_queue(blocked)) {
@@ -112,10 +188,16 @@ int main(int argc, char** argv) {
       }
     }
 
-    if(shmp->sec >= next_proc_sec && !stop) {
+    if(shmp->sec >= next_proc_sec && shmp->nanosec >= next_proc_nanosec && !stop) {
       printf("oss: Attempting to create next process. Time: shmp->sec = %d, shmp->nanosec = %d\n", shmp->sec, shmp->nanosec);
-      //printf("oss: i = %d ~~~~~~~~~~~\n", i); 
-      next_proc_sec++;
+      // set time until next process
+      next_proc_sec = shmp->sec + (rand() % (maxTimeBetweenNewProcsSecs + 1));
+      next_proc_nanosec = shmp->nanosec + (rand() % (maxTimeBetweenNewProcsNS + 1));
+      if(next_proc_nanosec > 1000000000) {
+        next_proc_sec += 1;
+        next_proc_nanosec -= 1000000000;
+      }
+
       if(i < 19) {
         pcb_index = i;
         i++;
@@ -149,7 +231,8 @@ int main(int argc, char** argv) {
             sprintf(num2, "%d", pcb_index);
             execl("./child_proc", "./child_proc", num2, NULL);
           default:
-            //msgrcv(msqid, &msg, sizeof(msg), getpid(), 0);
+            pid_arr[m] = child;
+            m++;
             msgrcv(msqid1, &msg1, sizeof(msg1), getpid(), 0);
             shmp->nanosec += 500000;
             if(shmp->nanosec > 1000000000) {
