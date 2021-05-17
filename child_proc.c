@@ -20,13 +20,14 @@ int main(int argc, char** argv) {
   struct shmbuf *shmp = (struct shmbuf *)shmat(shmid, NULL, 0);
   // initialize pcb
   int loc = atoi(argv[1]); 
+  srand(time(0) * (loc * 111));
   shmp->pcb[loc].real_pid = getpid();
   shmp->pcb[loc].type = type_select(TYPE_PROB, ((loc * shmp->sec) + getpid()));
-  shmp->pcb[loc].type = true;
+  shmp->pcb[loc].full = true;
   shmp->pcb[loc].done = false;
   shmp->pcb[loc].blocked = false;
   shmp->pcb[loc].cpu_sec = 0;
-  shmp->pcb[loc].cpu_nanosec = 75000000;
+  shmp->pcb[loc].cpu_nanosec = (rand() % 40000000) + 250000;
   printf("Child %d will run on cpu for %d.%d\n", loc, shmp->pcb[loc].cpu_sec,
           shmp->pcb[loc].cpu_nanosec); 
   unsigned finish_sec = 0;
@@ -62,51 +63,58 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
+  int block_prob;
+  if(shmp->pcb[loc].type == 1)
+    block_prob = CPU_BLOCKED_PROB;
+  else
+    block_prob = IO_BLOCKED_PROB;
+
+  //srand(time(0) * (loc * 111));
   // messages from child to parent
   struct msgbuf msg1;
   // messages from parent to child
   struct msgbuf msg2;
   fprintf(stderr, "child: Child %d is prepared.\n", loc);
   msg1.mtype = getppid();
+  msg1.mi.local_pid = loc;
   msg1.mi.sec = 0;
   msg1.mi.nanosec = 0;
   msgsnd(msqid1, &msg1, sizeof(msg1), 0);
-  bool flag = false;
   int x = 0;
   do {
     msgrcv(msqid2, &msg2, sizeof(msg2), getpid(), 0);
     fprintf(stderr, "child: Child %d recieved parent message, proceeding...\n", loc);
     msg1.mtype = getppid();
-     
+    msg1.mi.local_pid = loc;   
     time_sub(shmp->pcb[loc].cpu_sec,shmp->pcb[loc].cpu_nanosec, finish_sec,
              finish_nanosec, &diff_sec, &diff_nanosec); 
     //if interupted
     if(type_select(INTERUPT_PROB, x + loc)) {
       printf("child: Child %d is interupted, sending message back.\n", loc);
+      msg1.mi.sec = 0;
+      msg1.mi.nanosec = rand() % 150000;
+      msg1.mi.status = 1;
       shmp->pcb[loc].done = true;
       shmp->pcb[loc].total_cpu_sec = finish_sec;
-      shmp->pcb[loc].total_cpu_nanosec = finish_nanosec + 150000;
+      shmp->pcb[loc].total_cpu_nanosec = finish_nanosec + msg1.mi.nanosec;
       if(shmp->pcb[loc].total_cpu_nanosec >= 1000000000) {
         shmp->pcb[loc].total_cpu_sec++;
         shmp->pcb[loc].total_cpu_nanosec -= 1000000000;
       }
-      msg1.mi.sec = 0;
-      msg1.mi.nanosec = 150000;
-      msg1.mi.status = 1;
       msgsnd(msqid1, &msg1, sizeof(msg1), 0);
       break;
     }
     // if blocked: 
-    else if(type_select(BLOCKED_PROB, ((x * loc) + 11 + x))) {
+    else if(type_select(block_prob, ((x * loc) + 11 + x))) {
       //printf("child: Child %d is blocked, sending message back.\n", loc);
+      msg1.mi.sec = 0;
+      msg1.mi.nanosec = rand() % 250000;
+      msg1.mi.status = 2;
       shmp->pcb[loc].blocked = true;
-      shmp->pcb[loc].block_sec = shmp->sec + 2;
-      shmp->pcb[loc].block_nanosec = shmp->nanosec + 2;
+      shmp->pcb[loc].block_sec = shmp->sec + (rand() % 6);
+      shmp->pcb[loc].block_nanosec = shmp->nanosec + (rand() % 1001);
       printf("child: Child %d blocked until %d.%d~~~~~~~~\n", loc, 
              shmp->pcb[loc].block_sec, shmp->pcb[loc].block_nanosec);
-      msg1.mi.sec = 0;
-      msg1.mi.nanosec = 150000;
-      msg1.mi.status = 2;
       msgsnd(msqid1, &msg1, sizeof(msg1), 0);
     }
     //else if(x < 2) {
@@ -144,7 +152,9 @@ int main(int argc, char** argv) {
     }
     x++;
   }while(true);
-  shmdt(shmp);
-  printf("child: Child %d finished\n", loc);
+  if(shmdt(shmp) == -1) {
+    printf("~~~~~~~~~~~~~~~Child %d failed to detach from shared memory.\n", loc);
+  }
+  printf("child: Child %d finished~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", loc);
   return 0;
 }

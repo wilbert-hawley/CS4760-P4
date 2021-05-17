@@ -57,15 +57,25 @@ struct proc_ctrl_block {
 int TYPE_PROB;
 int BLOCKED_PROB;
 int INTERUPT_PROB;
+int IO_BLOCKED_PROB;
+int CPU_BLOCKED_PROB;
 int type_select(int, int);
 //struct proc_ctrl_block* init_pcb(int);
 void init_pcb(int, struct proc_ctrl_block*); 
+
+struct report {
+  unsigned int idle_sec;
+  unsigned int idle_nanosec;
+};
 
 struct shmbuf {
   unsigned int sec;
   unsigned int nanosec;
   struct proc_ctrl_block pcb[19];
+  struct report rep;
 };
+
+
 
 struct Queue {
     int front, 

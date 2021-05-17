@@ -1,8 +1,12 @@
 #include "utility.h"
 
-int TYPE_PROB = 80;
+int TYPE_PROB = 70;
 int BLOCKED_PROB = 10;
 int INTERUPT_PROB = 5;
+
+int IO_BLOCKED_PROB = 55; // 55
+int CPU_BLOCKED_PROB = 10; // 10
+
 // funciton to make random decisions
 int type_select(int prob, int x)
 {
